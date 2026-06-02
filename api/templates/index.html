@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Обзор - Стоматология{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2 me-2"></i>Панель управления</h2>
+    <a href="/dashboard/appointments" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Новая запись
+    </a>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-stat bg-white shadow-sm">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-gradient-primary text-white me-3">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Всего пациентов</h6>
+                    <h3 class="mb-0">{{ stats.total_patients }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-stat bg-white shadow-sm">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-gradient-success text-white me-3">
+                    <i class="bi bi-person-badge-fill"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Активных врачей</h6>
+                    <h3 class="mb-0">{{ stats.total_doctors }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-stat bg-white shadow-sm">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-gradient-warning text-white me-3">
+                    <i class="bi bi-calendar-check-fill"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Записей сегодня</h6>
+                    <h3 class="mb-0">{{ stats.today_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-stat bg-white shadow-sm">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-gradient-info text-white me-3">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1">Ожидают подтверждения</h6>
+                    <h3 class="mb-0">{{ stats.pending_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Записи за последние 7 дней</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Статусы записей</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Записи на сегодня -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-calendar-day me-2"></i>Записи на сегодня ({{ today.strftime('%d.%m.%Y') }})</h5>
+        {% if today_appointments %}
+        <span class="badge bg-primary">{{ today_appointments|length }} записей</span>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if today_appointments %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Время</th>
+                        <th>Пациент</th>
+                        <th>Врач</th>
+                        <th>Услуга</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apt in today_appointments %}
+                    <tr>
+                        <td>
+                            <strong>{{ apt.start_time.strftime('%H:%M') }}</strong>
+                            <small class="text-muted d-block">{{ apt.end_time.strftime('%H:%M') }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-medium">{{ apt.patient.full_name }}</div>
+                            <small class="text-muted">{{ apt.patient.phone or '—' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge specialization-{{ apt.doctor.specialization.value }}">
+                                {{ apt.doctor.specialization.value }}
+                            </span>
+                            <div class="small">{{ apt.doctor.full_name }}</div>
+                        </td>
+                        <td>{{ apt.service.name }}</td>
+                        <td>
+                            <span class="badge badge-status status-{{ apt.status.value }}">
+                                {% if apt.status.value == 'scheduled' %}Запланировано
+                                {% elif apt.status.value == 'confirmed' %}Подтверждено
+                                {% elif apt.status.value == 'completed' %}Завершено
+                                {% elif apt.status.value == 'cancelled' %}Отменено
+                                {% elif apt.status.value == 'no_show' %}Не явился
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if apt.status.value == 'scheduled' %}
+                                <form method="post" action="/dashboard/appointments/{{ apt.id }}/confirm" class="d-inline">
+                                    <button type="submit" class="btn btn-success" title="Подтвердить">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if apt.status.value in ['scheduled', 'confirmed'] %}
+                                <form method="post" action="/dashboard/appointments/{{ apt.id }}/cancel" class="d-inline">
+                                    <button type="submit" class="btn btn-danger" title="Отменить">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-calendar-x display-4"></i>
+            <p class="mt-3">На сегодня записей нет</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // График записей по дням
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    const dailyChart = new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ daily_stats | map(attribute='date') | list | tojson }},
+            datasets: [{
+                label: 'Количество записей',
+                data: {{ daily_stats | map(attribute='count') | list | tojson }},
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointBackgroundColor: '#667eea'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // График статусов (круговой)
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Запланировано', 'Подтверждено', 'Завершено', 'Отменено', 'Не явился'],
+            datasets: [{
+                data: [
+                    {{ status_stats.scheduled or 0 }},
+                    {{ status_stats.confirmed or 0 }},
+                    {{ status_stats.completed or 0 }},
+                    {{ status_stats.cancelled or 0 }},
+                    {{ status_stats.no_show or 0 }}
+                ],
+                backgroundColor: [
+                    '#cff4fc',
+                    '#d1e7dd',
+                    '#e2e3e5',
+                    '#f8d7da',
+                    '#fff3cd'
+                ],
+                borderColor: [
+                    '#055160',
+                    '#0f5132',
+                    '#41464b',
+                    '#842029',
+                    '#664d03'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

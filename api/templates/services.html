@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Услуги - Стоматология{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-check me-2"></i>Услуги клиники</h2>
+    <span class="badge bg-primary fs-6">{{ services|length }} услуг</span>
+</div>
+
+<div class="row">
+    {% for service in services %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ service.name }}</h5>
+                    <span class="badge bg-primary fs-6">{{ "%.0f"|format(service.base_price) }} ₽</span>
+                </div>
+                
+                <p class="card-text text-muted small mb-3">{{ service.description or 'Нет описания' }}</p>
+                
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-clock me-1"></i>{{ service.duration_minutes }} мин
+                    </span>
+                    <span class="badge specialization-{{ service.required_specialization.value }}">
+                        {% if service.required_specialization.value == 'therapist' %}Терапевт
+                        {% elif service.required_specialization.value == 'surgeon' %}Хирург
+                        {% elif service.required_specialization.value == 'orthodontist' %}Ортодонт
+                        {% elif service.required_specialization.value == 'orthopedist' %}Ортопед
+                        {% elif service.required_specialization.value == 'periodontist' %}Пародонтолог
+                        {% elif service.required_specialization.value == 'pediatric' %}Детский стоматолог
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not services %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-list-x display-4"></i>
+    <p class="mt-3">Услуги не найдены</p>
+</div>
+{% endif %}
+{% endblock %}
