@@ -173,11 +173,3 @@ pytest tests/test_services.py -v
 | **Migrations** | Alembic |
 | **Testing** | pytest + pytest-asyncio |
 | **Config** | pydantic-settings |
-
-## 📄 Лицензия
-
-MIT License — открытый исходный код.
-
-## 👥 Авторы
-
-Проект выполнен в рамках практико-ориентированной работы.
